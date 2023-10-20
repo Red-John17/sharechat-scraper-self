@@ -20,6 +20,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import os
 import chromedriver_autoinstaller
 import json
+from constants import tag_urls, perTagLimit
 
 
 # In[6]:
@@ -33,8 +34,6 @@ chrome_options.add_argument('--disable-popup-blocking')
 driver = webdriver.Chrome(options=chrome_options)
 
 # tag_url = "https://sharechat.com/tag/G7qd0K"
-tag_urls = ["https://sharechat.com/tag/r1A9QK", "https://sharechat.com/tag/Ab66zl", "https://sharechat.com/tag/nkOQN",
-            "https://sharechat.com/tag/BJd7kd",  "https://sharechat.com/tag/9pzqRa", "https://sharechat.com/tag/mB8Gl1"]
 
 driver.get(url)
 time.sleep(2)
@@ -42,7 +41,7 @@ time.sleep(2)
 outputJsonL = open('output.jsonl', 'a', encoding='utf-8')
 post_done = set()
 keepRunning = True
-perTagLimit = 20
+
 while keepRunning:
     for tag_url in tag_urls:
         postsDone = 0
