@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[ ]:
 
 
 import time
@@ -20,10 +20,10 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import os
 import chromedriver_autoinstaller
 import json
-from constants import tag_urls, perTagLimit
+from constants import tag_urls, perTagLimit, outputName
 
 
-# In[6]:
+# In[ ]:
 
 
 # URL of the ShareChat page
@@ -37,9 +37,15 @@ driver = webdriver.Chrome(options=chrome_options)
 
 driver.get(url)
 time.sleep(2)
-
-outputJsonL = open('output.jsonl', 'a', encoding='utf-8')
 post_done = set()
+if os.path.exists(outputName):
+    # read 
+    with open(outputName, 'r', encoding='utf-8') as f:
+        for line in f:
+            data = json.loads(line)
+            post_done.add(data['post_ph'])
+
+outputJsonL = open(outputName, 'a', encoding='utf-8')
 keepRunning = True
 
 while keepRunning:
@@ -59,6 +65,7 @@ while keepRunning:
                 # get the data-post-ph attribute of post
                 post_ph = post.get_attribute('data-post-ph')
                 if post_ph in post_done:
+                    print("Post already done:", post_ph)
                     continue
 
                 newPosts = True
@@ -70,6 +77,14 @@ while keepRunning:
                 author_element = post.find_element(
                     By.CSS_SELECTOR, 'strong[data-cy="author-name"]')
                 author_name = author_element.text
+
+                author_link_element = post.find_element(
+                    By.CSS_SELECTOR, 'a[data-cy="avatar-tag"]')
+                
+                author_link = author_link_element.get_attribute('href')
+
+                authorID = author_link[author_link.find('/profile/') +
+                        len('/profile/'):author_link.find('?referer=')]
 
                 topDetailsDiv = post.find_element(
                     By.XPATH, './/div[@class="H(100%) Pstart($xs) Fxg(1) Miw(0)"]')
@@ -90,6 +105,8 @@ while keepRunning:
                 pcText = post_caption.text
 
                 print("Author Name:", author_name)
+                print("Author Link:", author_link)
+                print("Author ID:", authorID)
                 print("Number of Views:", number_of_views)
                 print("Years Before:", years_before)
                 print("Post Caption:", pcText)
@@ -205,6 +222,9 @@ while keepRunning:
                                 len('/profile/'):href.find('?referer=')]
                     users.append(profile)
 
+                if authorID not in users:
+                    users.append(authorID)
+
                 print("Users:", users)
                 print("Number of users:", len(users))
                 driver.close()
@@ -288,6 +308,8 @@ while keepRunning:
                 curData = {
                     "post_ph": post_ph,
                     "author_name": author_name,
+                    "author_url": author_link,
+                    "author_id": authorID,
                     "number_of_views": number_of_views,
                     "years_before": years_before,
                     "post_caption": pcText,
