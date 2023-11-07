@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import time
@@ -23,7 +23,7 @@ import json
 from constants import tag_urls, perTagLimit, outputName
 
 
-# In[ ]:
+# In[2]:
 
 
 # URL of the ShareChat page
@@ -46,12 +46,12 @@ if os.path.exists(outputName):
             post_done.add(data['post_ph'])
 
 outputJsonL = open(outputName, 'a', encoding='utf-8')
-keepRunning = True
 
-while keepRunning:
-    for tag_url in tag_urls:
-        postsDone = 0
-        driver.get(tag_url)
+keepRunning = True
+for tag_url in tag_urls:
+    postsDone = 0
+    driver.get(tag_url)
+    while keepRunning:
         time.sleep(5)
 
         scroller = driver.find_element(By.XPATH,
