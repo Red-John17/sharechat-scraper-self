@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[3]:
 
 
 import time
@@ -23,7 +23,7 @@ import json
 from constants import tag_urls, perTagLimit, outputName
 
 
-# In[2]:
+# In[4]:
 
 
 # URL of the ShareChat page
@@ -49,6 +49,8 @@ outputJsonL = open(outputName, 'a', encoding='utf-8')
 
 keepRunning = True
 for tag_url in tag_urls:
+    if not keepRunning:
+        break
     postsDone = 0
     driver.get(tag_url)
     while keepRunning:
