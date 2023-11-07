@@ -25,12 +25,19 @@ from constants import tag_urls, perTagLimit, outputName
 
 # In[4]:
 
+# Set the display environment variable
+os.environ['DISPLAY'] = ':1'
 
 # URL of the ShareChat page
 url = "https://sharechat.com/trending/Hindi"
 chromedriver_autoinstaller.install()
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--disable-popup-blocking')
+chrome_options.add_argument("--disable-dev-shm-usage")  # Overcomes limited resource problems
+chrome_options.add_argument("--disable-gpu")  # Applicable to windows os only
+chrome_options.add_argument("--remote-debugging-port=9222")  # This is important
+chrome_options.add_argument("--no-sandbox")  # Disable sandboxing that Chrome runs in.
+print("CHANGE MADE")
 driver = webdriver.Chrome(options=chrome_options)
 
 # tag_url = "https://sharechat.com/tag/G7qd0K"
