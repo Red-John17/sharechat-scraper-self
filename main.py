@@ -33,11 +33,14 @@ url = "https://sharechat.com/trending/Hindi"
 chromedriver_autoinstaller.install()
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--disable-popup-blocking')
-chrome_options.add_argument("--disable-dev-shm-usage")  # Overcomes limited resource problems
+# Overcomes limited resource problems
+chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-gpu")  # Applicable to windows os only
-chrome_options.add_argument("--remote-debugging-port=9222")  # This is important
-chrome_options.add_argument("--no-sandbox")  # Disable sandboxing that Chrome runs in.
-print("CHANGE MADE")
+chrome_options.add_argument(
+    "--remote-debugging-port=9222")  # This is important
+# Disable sandboxing that Chrome runs in.
+chrome_options.add_argument("--no-sandbox")
+
 driver = webdriver.Chrome(options=chrome_options)
 
 # tag_url = "https://sharechat.com/tag/G7qd0K"
@@ -46,7 +49,7 @@ driver.get(url)
 time.sleep(2)
 post_done = set()
 if os.path.exists(outputName):
-    # read 
+    # read
     with open(outputName, 'r', encoding='utf-8') as f:
         for line in f:
             data = json.loads(line)
@@ -64,7 +67,7 @@ for tag_url in tag_urls:
         time.sleep(5)
 
         scroller = driver.find_element(By.XPATH,
-                                    "//div[@class='infinite-list-wrapper']")
+                                       "//div[@class='infinite-list-wrapper']")
         newPosts = False
         posts = scroller.find_elements(
             By.XPATH, './/div[@data-cy="image-post"] | //div[@data-cy="video-post"] | //div[@data-cy="gif-post"]')
@@ -89,11 +92,11 @@ for tag_url in tag_urls:
 
                 author_link_element = post.find_element(
                     By.CSS_SELECTOR, 'a[data-cy="avatar-tag"]')
-                
+
                 author_link = author_link_element.get_attribute('href')
 
                 authorID = author_link[author_link.find('/profile/') +
-                        len('/profile/'):author_link.find('?referer=')]
+                                       len('/profile/'):author_link.find('?referer=')]
 
                 topDetailsDiv = post.find_element(
                     By.XPATH, './/div[@class="H(100%) Pstart($xs) Fxg(1) Miw(0)"]')
@@ -149,7 +152,7 @@ for tag_url in tag_urls:
                     driver.close()
                     driver.switch_to.window(original_window)
                     continue
-                
+
                 time.sleep(1)
 
                 topBar = driver.find_element(
@@ -163,7 +166,8 @@ for tag_url in tag_urls:
                     if toFindinLike in li.text:
                         break
 
-                likeCount = int(topEls[idx].text.replace(toFindinLike, '').strip())
+                likeCount = int(topEls[idx].text.replace(
+                    toFindinLike, '').strip())
                 print("Likes: ", likeCount)
                 # click
                 topEls[idx].click()
@@ -228,7 +232,7 @@ for tag_url in tag_urls:
                     href = li.get_attribute('href')
                     # start after /profile/ from beginning and ?referrer=url from end
                     profile = href[href.find('/profile/') +
-                                len('/profile/'):href.find('?referer=')]
+                                   len('/profile/'):href.find('?referer=')]
                     users.append(profile)
 
                 if authorID not in users:
@@ -358,4 +362,3 @@ outputJsonL.close()
 
 
 driver.quit()
-
