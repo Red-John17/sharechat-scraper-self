@@ -21,9 +21,16 @@ import os
 import chromedriver_autoinstaller
 import json
 from constants import tag_urls, perTagLimit, outputName
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+nltk.download('vader_lexicon')
 
 
+def analyze_sentiment(text):
+    sia = SentimentIntensityAnalyzer()
+    return sia.polarity_scores(text)
 # In[4]:
+
 
 # Set the display environment variable
 os.environ['DISPLAY'] = ':1'
@@ -262,7 +269,8 @@ for tag_url in tag_urls:
                     if len(contentDiv) == 0:
                         continue
 
-                    commentStructure = {"text": "", "images": []}
+                    commentStructure = {"text": "",
+                                        "images": [], "sentiment": "N/A"}
                     for div in contentDiv:
                         # get text from div
                         text = div.text
@@ -272,6 +280,9 @@ for tag_url in tag_urls:
                             commentStructure["images"].append(
                                 img.get_attribute('src'))
                         commentStructure["text"] += text
+                        if len(commentStructure["text"]) > 0:
+                            commentStructure["sentiment"] = analyze_sentiment(
+                                commentStructure["text"])
 
                     comments[profile].append(commentStructure)
 
@@ -336,6 +347,7 @@ for tag_url in tag_urls:
                 # in this, strong tag with data-cy="author-name" is the name of the user, get it
                 # and add it to a list
 
+                justLikes = []
                 for li in listEls:
                     # get href value
                     href = li.get_attribute('href')
@@ -343,6 +355,7 @@ for tag_url in tag_urls:
                     profile = href[href.find('/profile/') +
                                    len('/profile/'):href.find('?referer=')]
                     users.append(profile)
+                    justLikes.append(profile)
 
                 if authorID not in users:
                     users.append(authorID)
@@ -439,7 +452,8 @@ for tag_url in tag_urls:
                     "post_caption": pcText,
                     "likes": likeCount,
                     "comments": comments,
-                    "users": users,
+                    "like_users": justLikes,
+                    "all_users": users,
                     "followers": followers,
                     "tag": tag_url
                 }

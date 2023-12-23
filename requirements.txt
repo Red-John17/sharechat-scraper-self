@@ -3,3 +3,4 @@ webdriver-manager
 pandas
 tqdm
 chromedriver-autoinstaller
+nltk
