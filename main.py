@@ -137,6 +137,7 @@ for tag_url in tag_urls:
                     window for window in driver.window_handles if window != original_window][0]
                 driver.switch_to.window(new_window)
                 toFindinLike = "लाइक"
+                toFindinComment = "कमेंट"
 
                 maxTriesFind = 5
                 tries = 0
@@ -169,6 +170,114 @@ for tag_url in tag_urls:
                 likeCount = int(topEls[idx].text.replace(
                     toFindinLike, '').strip())
                 print("Likes: ", likeCount)
+
+                idx2 = 0
+                for idx2, li in enumerate(topEls):
+                    if toFindinComment in li.text:
+                        break
+
+                commentCount = int(topEls[idx2].text.replace(
+                    toFindinComment, '').strip())
+                print("Comments: ", commentCount)
+
+                # COMMENTS SCRAPING
+                mainDiv = driver.find_element(
+                    By.XPATH, '//div[@class="Ovy(a) Fxg(1) W(100%) Maw(600px) M(a)"]')
+
+                loadedComments = len(mainDiv.find_elements(
+                    By.XPATH, './/div[@class="Px($sm) Pt($xs) Mb($xs) Bgc($white)"]'))
+
+                pbar = tqdm(total=commentCount)
+                scroll_increment = 100  # The amount by which to increment the scroll each time
+                current_scroll_position = 0  # Keep track of the current scroll position
+
+                checkFinishTimer = 5
+                startTimer = time.time()
+                sameSize = False
+                retried = False
+                while not sameSize or not retried:
+                    time.sleep(0.1)
+                    driver.execute_script(
+                        f"arguments[0].scrollTop = {current_scroll_position}", mainDiv)
+
+                    if sameSize:
+                        # scroll up a bit
+                        retried = True
+                        sameSize = False
+                        driver.execute_script(
+                            f"arguments[0].scrollTop = {current_scroll_position - 50}", mainDiv)
+
+                        continue
+                    current_scroll_position += scroll_increment
+
+                    if time.time() - startTimer > checkFinishTimer:
+                        listEls = mainDiv.find_elements(
+                            By.XPATH, './/div[@class="Px($sm) Pt($xs) Mb($xs) Bgc($white)"]')
+                        if len(listEls) == loadedComments:
+                            sameSize = True
+                            if retried:
+                                break
+
+                        else:
+                            retried = False
+                            sameSize = False
+                        loadedComments = len(listEls)
+
+                        pbar.update(loadedComments - pbar.n)
+                        startTimer = time.time()
+
+                pbar.close()
+                time.sleep(3)
+
+                # get the list of all the comments
+                listEls = mainDiv.find_elements(
+                    By.XPATH, './/div[@class="Px($sm) Pt($xs) Mb($xs) Bgc($white)"]')
+
+                comments = {}
+                users = []
+                for li in listEls:
+                    nameA = li.find_elements(
+                        By.XPATH, './/a[@class="Lh(20px) Mb($xs) Pend($xs) Whs(nw) Ovx(h) Tov(e) Maw(100%) C($bcBlue)"]')
+
+                    if len(nameA) == 0:
+                        continue
+
+                    if len(nameA) > 1:
+                        print("More than 1 nameA in comments")
+                        continue
+
+                    # get href
+                    href = nameA[0].get_attribute('href')
+                    # start after /profile/ from beginning, no need to find ?referrer=url from end
+                    profile = href[href.find('/profile/') +
+                                   len('/profile/'):]
+
+                    users.append(profile)
+
+                    if profile not in comments:
+                        comments[profile] = []
+
+                    contentDiv = li.find_elements(
+                        By.XPATH, './/div[@class="Pend($2xl)"]')
+                    if len(contentDiv) == 0:
+                        continue
+
+                    commentStructure = {"text": "", "images": []}
+                    for div in contentDiv:
+                        # get text from div
+                        text = div.text
+                        # add all img sources
+                        imgs = div.find_elements(By.XPATH, './/img')
+                        for img in imgs:
+                            commentStructure["images"].append(
+                                img.get_attribute('src'))
+                        commentStructure["text"] += text
+
+                    comments[profile].append(commentStructure)
+
+                print("Comments:", comments)
+
+                # LIKES SCRAPING
                 # click
                 topEls[idx].click()
 
@@ -226,7 +335,7 @@ for tag_url in tag_urls:
 
                 # in this, strong tag with data-cy="author-name" is the name of the user, get it
                 # and add it to a list
-                users = []
+
                 for li in listEls:
                     # get href value
                     href = li.get_attribute('href')
@@ -237,6 +346,8 @@ for tag_url in tag_urls:
 
                 if authorID not in users:
                     users.append(authorID)
+
+                users = list(set(users))
 
                 print("Users:", users)
                 print("Number of users:", len(users))
@@ -327,6 +438,7 @@ for tag_url in tag_urls:
                     "years_before": years_before,
                     "post_caption": pcText,
                     "likes": likeCount,
+                    "comments": comments,
                     "users": users,
                     "followers": followers,
                     "tag": tag_url
