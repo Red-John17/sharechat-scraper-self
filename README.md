@@ -59,4 +59,25 @@ The script outputs a file named as specified in the `outputName` variable in the
 ## Note
 
 - The script is dependent on the structure of the ShareChat website. Changes to the site may require updates to the script.
-- This script is for educational purposes and should be used in compliance with ShareChat's Terms of Service.
+
+## Output Structure
+
+```py
+curData = {
+   "post_ph": post_ph,
+   "author_name": author_name,
+   "author_url": author_link,
+   "author_id": authorID,
+   "number_of_views": number_of_views,
+   "years_before": years_before,
+   "post_caption": pcText,
+   "likes": likeCount,
+   "comments": comments,
+   "like_users": justLikes,
+   "all_users": users,
+   "followers": followers,
+   "tag": tag_url
+}
+```
+
+Each line in the `output.jsonl` file contains a JSON object with the above structure.
