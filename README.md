@@ -29,7 +29,7 @@ Ensure you have the above Python packages installed. You can install them using 
 
 3. **Docker (Optional)**: If you prefer using Docker, ensure Docker is installed on your system and use Docker Compose:
    ```
-   docker compose up
+   docker compose up -d
    ```
 
 ## Usage
