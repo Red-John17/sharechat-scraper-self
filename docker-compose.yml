@@ -1,10 +1,11 @@
-version: '3.9'
+version: "3.9"
 services:
   selenium-chrome:
     build: .
     ports:
       - "5900:5900" # Expose VNC port
       - "4444:4444" # If you need to expose the Selenium port
+      - "5002:5002" # If you need to expose the Flask port
     volumes:
       - .:/usr/src/app
     environment:
