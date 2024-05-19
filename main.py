@@ -27,8 +27,12 @@ import threading
 
 nltk.download('vader_lexicon')
 
-tag_urls = ["https://sharechat.com/tag/mB8Gl1", "https://sharechat.com/tag/BJd7kd", "https://sharechat.com/tag/r1A9QK", "https://sharechat.com/tag/Ab66zl", "https://sharechat.com/tag/nkOQN",
-            "https://sharechat.com/tag/9pzqRa"]
+# tag_urls = ["https://sharechat.com/tag/mB8Gl1", "https://sharechat.com/tag/BJd7kd", "https://sharechat.com/tag/r1A9QK", "https://sharechat.com/tag/Ab66zl", "https://sharechat.com/tag/nkOQN",
+#             "https://sharechat.com/tag/9pzqRa"]
+
+tag_urls = None
+tag_keyword = None
+tag_keyword_limit = None
 perTagLimit = 20
 outputName = 'output.jsonl'
 
@@ -37,17 +41,115 @@ def analyze_sentiment(text):
     sia = SentimentIntensityAnalyzer()
     return sia.polarity_scores(text)
 # In[4]:
+chromedriver_autoinstaller.install()
+
+def makeTagsThenScrape():
+    global tag_keyword, tag_keyword_limit, tag_urls
+    url = "https://sharechat.com/trending/Hindi"
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--disable-popup-blocking')
+    # maximized
+    chrome_options.add_argument("--start-maximized")
+    # Overcomes limited resource problems
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")  # Applicable to windows os only
+    chrome_options.add_argument(
+        "--remote-debugging-port=9222")  # This is important
+    # Disable sandboxing that Chrome runs in.
+    chrome_options.add_argument("--no-sandbox")
+
+    driver = webdriver.Chrome(options=chrome_options)
+
+    # tag_url = "https://sharechat.com/tag/G7qd0K"
+
+    driver.get(url)
+    time.sleep(2)
+
+    # click on //input[@type='search']
+    searchInput = driver.find_element(By.XPATH, '//input[@type="search"]')
+    searchInput.send_keys(tag_keyword)
+    time.sleep(2)
+    # click on //li[contains(., 'टैग्ज़')]
+    tags = driver.find_element(By.XPATH, '//li[contains(., "टैग्ज़")]')
+    tags.click()
+    time.sleep(2)
+
+    # //div[@class='infinite-list-wrapper' and @style='height: 400px; overflow: hidden scroll;']
+    scroller = driver.find_element(By.XPATH, '//div[@class="infinite-list-wrapper" and @style="height: 400px; overflow: hidden scroll;"]')
+
+    # all divs //div[contains(@class, 'Py($md)') and contains(@class, 'Bgc($white)') and contains(@class, 'P($md)') and contains(@class, 'My($xs)') and contains(@class, 'Bxsh($bxshprofileCard)')]
+    curDivs = scroller.find_elements(By.XPATH, '//div[contains(@class, "Py($md)") and contains(@class, "Bgc($white)") and contains(@class, "P($md)") and contains(@class, "My($xs)") and contains(@class, "Bxsh($bxshprofileCard)")]')
+    print("Number of tags found:", len(curDivs))
+    current_scroll_position = 0  # Keep track of the current scroll position
+
+    loadedComments = 0
+    checkFinishTimer = 5
+    scroll_increment = 100
+    startTimer = time.time()
+    sameSize = False
+    retried = False
+    allTags = set()
+    while not sameSize or not retried:
+        time.sleep(0.1)
+        driver.execute_script(
+            f"arguments[0].scrollTop = {current_scroll_position}", scroller)
+
+        if sameSize:
+            # scroll up a bit
+            retried = True
+            sameSize = False
+            driver.execute_script(
+                f"arguments[0].scrollTop = {current_scroll_position - 50}", scroller)
+
+            continue
+        current_scroll_position += scroll_increment
+        time.sleep(0.5)
+        listEls = scroller.find_elements(By.XPATH, '//div[contains(@class, "Py($md)") and contains(@class, "Bgc($white)") and contains(@class, "P($md)") and contains(@class, "My($xs)") and contains(@class, "Bxsh($bxshprofileCard)")]')
+ 
+        # go through them, find a tag in it with data-cy='avatar-tag' and gets its href and put it in allTags
+        for div in listEls:
+            if len(allTags) >= tag_keyword_limit:
+                break
+
+            tag = div.find_element(By.XPATH, './/a[@data-cy="avatar-tag"]')
+            href = tag.get_attribute('href')
+            # find ? and only before it
+            allTags.add(href[:href.find('?')])
 
 
+        if time.time() - startTimer > checkFinishTimer:
+            if len(allTags) == loadedComments:
+                sameSize = True
+                if retried:
+                    break
+            else:
+                retried = False
+                sameSize = False
+                print(allTags, len(allTags))
+
+            if len(allTags) >= tag_keyword_limit:
+                allTags = list(allTags)
+                break
+                
+            loadedComments = len(allTags)
+
+            startTimer = time.time()
+
+    print("All tags:", allTags)
+
+    tag_urls = allTags
+    driver.quit()
+
+    run()
 # Set the display environment variable
 os.environ['DISPLAY'] = ':1'
 # URL of the ShareChat page
 def run():
-    
     url = "https://sharechat.com/trending/Hindi"
-    chromedriver_autoinstaller.install()
+
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--disable-popup-blocking')
+    chrome_options.add_argument("--start-maximized")
     # Overcomes limited resource problems
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")  # Applicable to windows os only
@@ -523,11 +625,16 @@ def hello_world():
 @app.route('/scrape', methods=['POST'])
 @cross_origin(supports_credentials=True, origins='*')
 def scrape_data():
-    global perTagLimit, outputName, tag_urls
-    
+    global perTagLimit, outputName, tag_urls, tag_keyword, tag_keyword_limit
+    # reset them
+    perTagLimit = 20
+    outputName = 'output.jsonl'
+    tag_urls = None
+    tag_keyword = None
+    tag_keyword_limit = None
     try:
         maxCount = request.json['maxCount']
-        perTagLimit = maxCount
+        perTagLimit = int(maxCount)
     except:
         pass
     try:
@@ -541,10 +648,22 @@ def scrape_data():
         tag_urls = tag_urlsL
     except:
         pass
+
+    try:
+        tag_keywordL = request.json['tag_keyword']
+        tag_keyword = tag_keywordL
+        tag_keyword_limitL = request.json['tag_keyword_limit']
+        tag_keyword_limit = int(tag_keyword_limitL)
+    except:
+        pass
+    
+    if tag_urls is None:
+        thread = threading.Thread(target=makeTagsThenScrape)
+        thread.start()
+        return f"Tag URLs not provided, keyword to search on ShareChat: {tag_keyword}, limit: {tag_keyword_limit}"
     
     thread = threading.Thread(target=background_scrape)
     thread.start()
-
     return f"Scraping started with maxCount: {perTagLimit}, outputName: {outputName}, tag_urls: {tag_urls}"
 
 if __name__ == '__main__':
