@@ -472,6 +472,9 @@ def run():
                     outputJsonL.flush()
                     postsDone += 1
 
+                    if postsDone >= perTagLimit:
+                        break
+
                 except KeyboardInterrupt:
                     keepRunning = False
                     print("Keyboard Interrupt... Exiting")
@@ -493,6 +496,10 @@ def run():
     outputJsonL.close()
     et = time.time()
     print("Time taken:", et - st)
+    # save to file too
+    with open('timeTaken.txt', 'w') as f:
+        f.write(str(et - st))
+        
 
 
     # In[ ]:
