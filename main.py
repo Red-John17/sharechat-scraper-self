@@ -220,13 +220,13 @@ def run():
         while keepRunning:
             tries += 1
             print(f"Tag URL: {tag_url}, Tag Keyword: {tag_keyword}", flush=True)
-            if driver.current_url != tag_url:
+            if tag_url not in driver.current_url :
                 print(f"Going to tag URL: {tag_url}", flush=True)
                 driver.get(tag_url)
                 time.sleep(5 * scrapeDelayCoeff)
             try:
                 # check if url is still tag_url
-                if driver.current_url != tag_url:
+                if tag_url not in driver.current_url:
                     print(f"URL changed, retrying: {driver.current_url}", flush=True)
                     raise Exception("URL changed")
                 scroller = driver.find_element(By.XPATH,
@@ -303,6 +303,9 @@ def run():
                     print("Number of Views:", number_of_views)
                     print("Years Before:", years_before)
                     print("Post Caption:", pcText, flush=True)
+                    # print("Posts done:", len(post_done), flush=True)
+
+                    # continue
 
                     # open new page comments
                     commentLink = f"https://sharechat.com/comment/{post_ph}"
