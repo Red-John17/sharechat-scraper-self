@@ -166,7 +166,7 @@ def makeTagsThenScrape():
             continue
 
     print("Tag URLs:", tag_urls)
-    print("Tag URLs length:", len(tag_urls))
+    print("Tag URLs length:", len(tag_urls), flush=True)
     run()
 # Set the display environment variable
 os.environ['DISPLAY'] = ':1'
