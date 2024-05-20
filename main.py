@@ -25,6 +25,7 @@ from flask import Flask, request
 from flask_cors import CORS, cross_origin
 import threading
 
+max_retries = 5
 nltk.download('vader_lexicon')
 
 # tag_urls = ["https://sharechat.com/tag/mB8Gl1", "https://sharechat.com/tag/BJd7kd", "https://sharechat.com/tag/r1A9QK", "https://sharechat.com/tag/Ab66zl", "https://sharechat.com/tag/nkOQN",
@@ -44,106 +45,124 @@ def analyze_sentiment(text):
 chromedriver_autoinstaller.install()
 
 def makeTagsThenScrape():
-    global tag_keywords, tag_keyword_limit, tag_urls
+    global tag_keywords, tag_keyword_limit, tag_urls, max_retries
     tag_urls = set()
+    delayMul = 1.5
 
     for tag_keyword in tag_keywords:
-        url = "https://sharechat.com/trending/Hindi"
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument('--disable-popup-blocking')
-        # maximized
-        chrome_options.add_argument("--start-maximized")
-        # Overcomes limited resource problems
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")  # Applicable to windows os only
-        chrome_options.add_argument(
-            "--remote-debugging-port=9222")  # This is important
-        # Disable sandboxing that Chrome runs in.
-        chrome_options.add_argument("--no-sandbox")
+        retry_count = 0
+          # Maximum number of retries for each iteration
+        success = False
+        delayCoeff = 1
+        while retry_count < max_retries and not success:
+            try:
+                retry_count += 1
+                url = "https://sharechat.com/trending/Hindi"
+                chrome_options = webdriver.ChromeOptions()
+                chrome_options.add_argument('--disable-popup-blocking')
+                # maximized
+                chrome_options.add_argument("--start-maximized")
+                # Overcomes limited resource problems
+                chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--disable-gpu")  # Applicable to windows os only
+                chrome_options.add_argument(
+                    "--remote-debugging-port=9222")  # This is important
+                # Disable sandboxing that Chrome runs in.
+                chrome_options.add_argument("--no-sandbox")
 
-        driver = webdriver.Chrome(options=chrome_options)
+                driver = webdriver.Chrome(options=chrome_options)
 
-        # tag_url = "https://sharechat.com/tag/G7qd0K"
+                # tag_url = "https://sharechat.com/tag/G7qd0K"
 
-        driver.get(url)
-        time.sleep(2)
+                driver.get(url)
+                time.sleep(2 * delayCoeff)
 
-        # click on //input[@type='search']
-        searchInput = driver.find_element(By.XPATH, '//input[@type="search"]')
-        searchInput.send_keys(tag_keyword)
-        time.sleep(2)
-        # click on //li[contains(., 'टैग्ज़')]
-        tags = driver.find_element(By.XPATH, '//li[contains(., "टैग्ज़")]')
-        tags.click()
-        time.sleep(2)
+                # click on //input[@type='search']
+                searchInput = driver.find_element(By.XPATH, '//input[@type="search"]')
+                searchInput.send_keys(tag_keyword)
+                time.sleep(2 * delayCoeff)
+                # click on //li[contains(., 'टैग्ज़')]
+                tags = driver.find_element(By.XPATH, '//li[contains(., "टैग्ज़")]')
+                tags.click()
+                time.sleep(2 * delayCoeff)
 
-        # //div[@class='infinite-list-wrapper' and @style='height: 400px; overflow: hidden scroll;']
-        scroller = driver.find_element(By.XPATH, '//div[@class="infinite-list-wrapper" and @style="height: 400px; overflow: hidden scroll;"]')
+                # //div[@class='infinite-list-wrapper' and @style='height: 400px; overflow: hidden scroll;']
+                scroller = driver.find_element(By.XPATH, '//div[@class="infinite-list-wrapper" and @style="height: 400px; overflow: hidden scroll;"]')
 
-        # all divs //div[contains(@class, 'Py($md)') and contains(@class, 'Bgc($white)') and contains(@class, 'P($md)') and contains(@class, 'My($xs)') and contains(@class, 'Bxsh($bxshprofileCard)')]
-        curDivs = scroller.find_elements(By.XPATH, '//div[contains(@class, "Py($md)") and contains(@class, "Bgc($white)") and contains(@class, "P($md)") and contains(@class, "My($xs)") and contains(@class, "Bxsh($bxshprofileCard)")]')
-        print("Number of tags found:", len(curDivs))
-        current_scroll_position = 0  # Keep track of the current scroll position
+                # all divs //div[contains(@class, 'Py($md)') and contains(@class, 'Bgc($white)') and contains(@class, 'P($md)') and contains(@class, 'My($xs)') and contains(@class, 'Bxsh($bxshprofileCard)')]
+                curDivs = scroller.find_elements(By.XPATH, '//div[contains(@class, "Py($md)") and contains(@class, "Bgc($white)") and contains(@class, "P($md)") and contains(@class, "My($xs)") and contains(@class, "Bxsh($bxshprofileCard)")]')
+                print("Number of tags found:", len(curDivs))
+                current_scroll_position = 0  # Keep track of the current scroll position
 
-        loadedComments = 0
-        checkFinishTimer = 5
-        scroll_increment = 100
-        startTimer = time.time()
-        sameSize = False
-        retried = False
-        allTags = set()
-        while not sameSize or not retried:
-            time.sleep(0.1)
-            driver.execute_script(
-                f"arguments[0].scrollTop = {current_scroll_position}", scroller)
-
-            if sameSize:
-                # scroll up a bit
-                retried = True
-                sameSize = False
-                driver.execute_script(
-                    f"arguments[0].scrollTop = {current_scroll_position - 50}", scroller)
-
-                continue
-            current_scroll_position += scroll_increment
-            time.sleep(1)
-            listEls = scroller.find_elements(By.XPATH, '//div[contains(@class, "Py($md)") and contains(@class, "Bgc($white)") and contains(@class, "P($md)") and contains(@class, "My($xs)") and contains(@class, "Bxsh($bxshprofileCard)")]')
-    
-            # go through them, find a tag in it with data-cy='avatar-tag' and gets its href and put it in allTags
-            for div in listEls:
-                if len(allTags) >= tag_keyword_limit:
-                    break
-
-                tag = div.find_element(By.XPATH, './/a[@data-cy="avatar-tag"]')
-                href = tag.get_attribute('href')
-                # find ? and only before it
-                allTags.add(href[:href.find('?')])
-
-
-            if time.time() - startTimer > checkFinishTimer:
-                if len(allTags) == loadedComments:
-                    sameSize = True
-                    if retried:
-                        break
-                else:
-                    retried = False
-                    sameSize = False
-                    print(allTags, len(allTags))
-
-                if len(allTags) >= tag_keyword_limit:
-                    allTags = list(allTags)
-                    break
-                    
-                loadedComments = len(allTags)
-
+                loadedComments = 0
+                checkFinishTimer = 5
+                scroll_increment = 100
                 startTimer = time.time()
+                sameSize = False
+                retried = False
+                allTags = set()
+                while not sameSize or not retried:
+                    time.sleep(0.1 * delayCoeff)
+                    driver.execute_script(
+                        f"arguments[0].scrollTop = {current_scroll_position}", scroller)
 
-        print("All tags:", allTags)
+                    if sameSize:
+                        # scroll up a bit
+                        retried = True
+                        sameSize = False
+                        driver.execute_script(
+                            f"arguments[0].scrollTop = {current_scroll_position - 50}", scroller)
 
-        for tag in allTags:
-            tag_urls.add(tag)
+                        continue
+                    current_scroll_position += scroll_increment
+                    time.sleep(1 * delayCoeff)
+                    listEls = scroller.find_elements(By.XPATH, '//div[contains(@class, "Py($md)") and contains(@class, "Bgc($white)") and contains(@class, "P($md)") and contains(@class, "My($xs)") and contains(@class, "Bxsh($bxshprofileCard)")]')
             
-        driver.quit()
+                    # go through them, find a tag in it with data-cy='avatar-tag' and gets its href and put it in allTags
+                    for div in listEls:
+                        if len(allTags) >= tag_keyword_limit:
+                            break
+
+                        tag = div.find_element(By.XPATH, './/a[@data-cy="avatar-tag"]')
+                        href = tag.get_attribute('href')
+                        # find ? and only before it
+                        allTags.add(href[:href.find('?')])
+
+
+                    if time.time() - startTimer > checkFinishTimer:
+                        if len(allTags) == loadedComments:
+                            sameSize = True
+                            if retried:
+                                break
+                        else:
+                            retried = False
+                            sameSize = False
+                            print(allTags, len(allTags))
+
+                        if len(allTags) >= tag_keyword_limit:
+                            allTags = list(allTags)
+                            break
+                            
+                        loadedComments = len(allTags)
+
+                        startTimer = time.time()
+
+                print("All tags:", allTags)
+
+                for tag in allTags:
+                    tag_urls.add(tag)
+                    
+                driver.quit()
+                success = True
+            except Exception as e:
+                print("An error occurred:", str(e))
+                delayCoeff *= delayMul
+                driver.quit()
+                continue
+
+        if not success:
+            print("Failed to get tags for keyword:", tag_keyword)
+            continue
 
     print("Tag URLs:", tag_urls)
     run()
