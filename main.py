@@ -215,13 +215,20 @@ def run():
         if not keepRunning:
             break
         postsDone = 0
-        driver.get(tag_url)
         tries = 0
-        max_retries = 5
+        max_retries = 50
         while keepRunning:
             tries += 1
-            time.sleep(5 * scrapeDelayCoeff)
+            print(f"Tag URL: {tag_url}, Tag Keyword: {tag_keyword}", flush=True)
+            if driver.current_url != tag_url:
+                print(f"Going to tag URL: {tag_url}", flush=True)
+                driver.get(tag_url)
+                time.sleep(5 * scrapeDelayCoeff)
             try:
+                # check if url is still tag_url
+                if driver.current_url != tag_url:
+                    print(f"URL changed, retrying: {driver.current_url}", flush=True)
+                    raise Exception("URL changed")
                 scroller = driver.find_element(By.XPATH,
                                             "//div[@class='infinite-list-wrapper']")
                 newPosts = False
@@ -229,19 +236,23 @@ def run():
                     By.XPATH, './/div[@data-cy="image-post"] | //div[@data-cy="video-post"] | //div[@data-cy="gif-post"]')
             except:
                 # print html source
-                print(driver.page_source)
+                # print(driver.page_source)
                 print("An error occurred while getting posts", flush=True)
                 # save into a file
-                with open('error.html', 'w') as f:
-                    f.write(driver.page_source)
+                # with open('error.html', 'w') as f:
+                #     f.write(driver.page_source)
                     
-                driver.refresh()
+                driver.get(url)
+            
                 if tries >= max_retries:
                     break
-
+                time.sleep(5 * scrapeDelayCoeff)
                 continue
             
             print("Infinite list obtained", flush=True)
+            # with open('succeeded.html', 'w') as f:
+            #     f.write(driver.page_source)
+                
             for post in posts:
                 try:
                     # get the data-post-ph attribute of post
