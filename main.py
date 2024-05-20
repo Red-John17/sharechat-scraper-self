@@ -138,7 +138,7 @@ def makeTagsThenScrape():
                         else:
                             retried = False
                             sameSize = False
-                            print(allTags, len(allTags))
+                            # print(allTags, len(allTags))
 
                         if len(allTags) >= tag_keyword_limit:
                             allTags = list(allTags)
@@ -148,7 +148,7 @@ def makeTagsThenScrape():
 
                         startTimer = time.time()
 
-                print("All tags:", allTags)
+                print("All tags:", allTags, flush=True)
 
                 for tag in allTags:
                     tag_urls.add((tag, tag_keyword))
