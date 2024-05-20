@@ -231,6 +231,10 @@ def run():
                 # print html source
                 print(driver.page_source)
                 print("An error occurred while getting posts", flush=True)
+                # save into a file
+                with open('error.html', 'w') as f:
+                    f.write(driver.page_source)
+                    
                 driver.refresh()
                 if tries >= max_retries:
                     break
