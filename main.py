@@ -166,6 +166,13 @@ def makeTagsThenScrape():
             continue
 
     print("Tag URLs:", tag_urls)
+    # rquest structure   "tag_urls":["https://sharechat.com/tag/AZm3Z", "https://sharechat.com/tag/Mpj0Na", "https://sharechat.com/tag/wnZJjw", "https://sharechat.com/tag/R3Vmg0"],
+    print(f"If it crashes later on, you can restart the process with these tag URLs. Just add this to the request JSON:\n \"tag_urls\": ", end="")
+    tagUrlsReq = []
+    for tag_url, tag_keyword in tag_urls:
+        tagUrlsReq.append(tag_url)
+    print(tagUrlsReq)
+
     print("Tag URLs length:", len(tag_urls), flush=True)
     run()
 # Set the display environment variable
@@ -209,15 +216,28 @@ def run():
             break
         postsDone = 0
         driver.get(tag_url)
+        tries = 0
+        max_retries = 5
         while keepRunning:
+            tries += 1
             time.sleep(5 * scrapeDelayCoeff)
+            try:
+                scroller = driver.find_element(By.XPATH,
+                                            "//div[@class='infinite-list-wrapper']")
+                newPosts = False
+                posts = scroller.find_elements(
+                    By.XPATH, './/div[@data-cy="image-post"] | //div[@data-cy="video-post"] | //div[@data-cy="gif-post"]')
+            except:
+                # print html source
+                print(driver.page_source)
+                print("An error occurred while getting posts", flush=True)
+                driver.refresh()
+                if tries >= max_retries:
+                    break
 
-            scroller = driver.find_element(By.XPATH,
-                                        "//div[@class='infinite-list-wrapper']")
-            newPosts = False
-            posts = scroller.find_elements(
-                By.XPATH, './/div[@data-cy="image-post"] | //div[@data-cy="video-post"] | //div[@data-cy="gif-post"]')
-
+                continue
+            
+            print("Infinite list obtained", flush=True)
             for post in posts:
                 try:
                     # get the data-post-ph attribute of post
