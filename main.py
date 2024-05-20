@@ -35,6 +35,7 @@ tag_urls = None
 tag_keywords = None
 tag_keyword_limit = None
 perTagLimit = 20
+scrapeDelayCoeff = 1
 outputName = 'output.jsonl'
 
 
@@ -53,7 +54,7 @@ def makeTagsThenScrape():
         retry_count = 0
           # Maximum number of retries for each iteration
         success = False
-        delayCoeff = 1
+        delayCoeff = 1 * scrapeDelayCoeff
         while retry_count < max_retries and not success:
             try:
                 retry_count += 1
@@ -150,7 +151,7 @@ def makeTagsThenScrape():
                 print("All tags:", allTags)
 
                 for tag in allTags:
-                    tag_urls.add(tag)
+                    tag_urls.add((tag, tag_keyword))
                     
                 driver.quit()
                 success = True
@@ -165,11 +166,13 @@ def makeTagsThenScrape():
             continue
 
     print("Tag URLs:", tag_urls)
+    print("Tag URLs length:", len(tag_urls))
     run()
 # Set the display environment variable
 os.environ['DISPLAY'] = ':1'
 # URL of the ShareChat page
 def run():
+    global scrapeDelayCoeff
     url = "https://sharechat.com/trending/Hindi"
 
     chrome_options = webdriver.ChromeOptions()
@@ -188,7 +191,7 @@ def run():
     # tag_url = "https://sharechat.com/tag/G7qd0K"
 
     driver.get(url)
-    time.sleep(2)
+    time.sleep(2 * scrapeDelayCoeff)
     post_done = set()
     if os.path.exists(outputName):
         # read
@@ -201,13 +204,13 @@ def run():
 
     keepRunning = True
     st = time.time()
-    for tag_url in tag_urls:
+    for tag_url, tag_keyword in tag_urls:
         if not keepRunning:
             break
         postsDone = 0
         driver.get(tag_url)
         while keepRunning:
-            time.sleep(5)
+            time.sleep(5 * scrapeDelayCoeff)
 
             scroller = driver.find_element(By.XPATH,
                                         "//div[@class='infinite-list-wrapper']")
@@ -273,7 +276,7 @@ def run():
                     original_window = driver.current_window_handle
 
                     driver.execute_script(f"window.open('{commentLink}');")
-                    time.sleep(1)
+                    time.sleep(1 * scrapeDelayCoeff)
                     # reload
 
                     new_window = [
@@ -286,7 +289,7 @@ def run():
                     tries = 0
                     while toFindinLike not in driver.page_source:
                         driver.refresh()
-                        time.sleep(2)
+                        time.sleep(2 * scrapeDelayCoeff)
                         tries += 1
 
                         if tries > maxTriesFind:
@@ -297,7 +300,7 @@ def run():
                         driver.switch_to.window(original_window)
                         continue
 
-                    time.sleep(1)
+                    time.sleep(1 * scrapeDelayCoeff)
 
                     topBar = driver.find_element(
                         By.XPATH, '//ul[@class="List(n)  D(f) Ai(c) W(100%) H(100%) "]')
@@ -339,7 +342,7 @@ def run():
                     sameSize = False
                     retried = False
                     while not sameSize or not retried:
-                        time.sleep(0.1)
+                        time.sleep(0.1 * scrapeDelayCoeff)
                         driver.execute_script(
                             f"arguments[0].scrollTop = {current_scroll_position}", mainDiv)
 
@@ -370,7 +373,7 @@ def run():
                             startTimer = time.time()
 
                     pbar.close()
-                    time.sleep(3)
+                    time.sleep(3 * scrapeDelayCoeff)
 
                     # get the list of all the comments
                     listEls = mainDiv.find_elements(
@@ -443,7 +446,7 @@ def run():
                     sameSize = False
                     retried = False
                     while not sameSize or not retried:
-                        time.sleep(0.1)
+                        time.sleep(0.1 * scrapeDelayCoeff)
                         driver.execute_script(
                             f"arguments[0].scrollTop = {current_scroll_position}", mainDiv)
 
@@ -474,7 +477,7 @@ def run():
                             startTimer = time.time()
 
                     pbar.close()
-                    time.sleep(3)
+                    time.sleep(3 * scrapeDelayCoeff)
 
                     # get the list of all the users
                     listEls = mainDiv.find_elements(
@@ -509,13 +512,13 @@ def run():
                         followers[user] = []
                         followerUrl = f"https://sharechat.com/profile/{user}/followers"
                         driver.execute_script(f"window.open('{followerUrl}');")
-                        time.sleep(1)
+                        time.sleep(1 * scrapeDelayCoeff)
                         # reload
 
                         new_window = [
                             window for window in driver.window_handles if window != original_window][0]
                         driver.switch_to.window(new_window)
-                        time.sleep(1)
+                        time.sleep(1 * scrapeDelayCoeff)
 
                         noContentText = "कोई यूज़र नहीं मिला"
                         # skip if no content
@@ -540,7 +543,7 @@ def run():
                             driver.execute_script(
                                 "window.scrollTo(0, document.body.scrollHeight);")
 
-                            time.sleep(1)
+                            time.sleep(1 * scrapeDelayCoeff)
 
                             if sameSize:
                                 # scroll up a bit
@@ -548,7 +551,7 @@ def run():
                                 sameSize = False
                                 driver.execute_script(
                                     "window.scrollTo(0, document.body.scrollHeight - 50);")
-                                time.sleep(1)
+                                time.sleep(1 * scrapeDelayCoeff)
                                 continue
 
                             listEls = driver.find_elements(
@@ -591,9 +594,10 @@ def run():
                         "like_users": justLikes,
                         "all_users": users,
                         "followers": followers,
-                        "tag": tag_url
+                        "tag": tag_url,
+                        "tag_keyword": tag_keyword
                     }
-                    print("Data:", curData)
+                    print("Data:", curData, flush=True)
 
                     outputJsonL.write(json.dumps(curData) + '\n')
                     outputJsonL.flush()
@@ -613,7 +617,7 @@ def run():
             driver.execute_script(
                 "window.scrollTo(0, document.body.scrollHeight);")
 
-            time.sleep(5)
+            time.sleep(5 * scrapeDelayCoeff)
             if not newPosts or postsDone >= perTagLimit:
                 break
 
@@ -650,7 +654,7 @@ def hello_world():
 @app.route('/scrape', methods=['POST'])
 @cross_origin(supports_credentials=True, origins='*')
 def scrape_data():
-    global perTagLimit, outputName, tag_urls, tag_keywords, tag_keyword_limit
+    global perTagLimit, outputName, tag_urls, tag_keywords, tag_keyword_limit, scrapeDelayCoeff
     # reset them
     perTagLimit = 20
     outputName = 'output.jsonl'
@@ -671,7 +675,10 @@ def scrape_data():
 
     try:
         tag_urlsL = request.json['tag_urls']
-        tag_urls = tag_urlsL
+        tag_urls = set()
+        for url in tag_urlsL:
+            tag_urls.add((url, "None"))
+
     except:
         pass
 
@@ -680,6 +687,12 @@ def scrape_data():
         tag_keywords = tag_keywordL
         tag_keyword_limitL = request.json['tag_keyword_limit']
         tag_keyword_limit = int(tag_keyword_limitL)
+    except:
+        pass
+
+    try:
+        scrapeDelayCoeffL = request.json['scrapeDelayCoeff']
+        scrapeDelayCoeff = int(scrapeDelayCoeffL)
     except:
         pass
     
