@@ -252,7 +252,7 @@ def run():
 
                     newPosts = True
 
-                    print("Post PH:", post_ph)
+                    print("Post PH:", post_ph, flush=True)
 
                     post_done.add(post_ph)
                     # Locate the elements containing the information
@@ -291,7 +291,7 @@ def run():
                     print("Author ID:", authorID)
                     print("Number of Views:", number_of_views)
                     print("Years Before:", years_before)
-                    print("Post Caption:", pcText)
+                    print("Post Caption:", pcText, flush=True)
 
                     # open new page comments
                     commentLink = f"https://sharechat.com/comment/{post_ph}"
@@ -635,7 +635,7 @@ def run():
                     print("Keyboard Interrupt... Exiting")
                     break
                 except Exception as e:
-                    print("An error occurred:", str(e))
+                    print("An error occurred:", str(e), flush=True)
                     continue
 
             driver.execute_script(
